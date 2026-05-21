@@ -63,6 +63,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // Data dummy awal
   final List<Catatan> _catatan = [
     Catatan(
       id: '1',
@@ -74,6 +75,7 @@ class _HomePageState extends State<HomePage> {
     ),
   ];
 
+  // Filter kategori
   String _kategoriFilter = 'Semua';
   final List<String> _opsiFilter = [
     'Semua',
@@ -103,6 +105,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Logika Filter Kategori
     final catatanDifilter = _catatan.where((c) {
       if (_kategoriFilter == 'Semua') return true;
       return c.kategori == _kategoriFilter;
@@ -112,6 +115,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('Catatan Mahasiswa'),
         actions: [
+          // Dropdown Filter di AppBar Home
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: DropdownButtonHideUnderline(
@@ -147,49 +151,29 @@ class _HomePageState extends State<HomePage> {
                 );
 
                 return ListTile(
-                  // Ikon Titik Tiga (PopupMenuButton) di Kiri
-                  leading: PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert),
-                    onSelected: (value) async {
-                      if (value == 'edit') {
-                        // Pindah ke halaman edit jika opsi "Edit" ditekan
-                        final updatedCatatan = await Navigator.pushNamed(
-                          context,
-                          '/tambah',
-                          arguments: c,
-                        );
-                        if (updatedCatatan is Catatan) {
-                          setState(() {
-                            final idx = _catatan.indexWhere(
-                              (element) => element.id == updatedCatatan.id,
-                            );
-                            if (idx != -1) _catatan[idx] = updatedCatatan;
-                          });
-                        }
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      // Isi dari pop-up menu
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, size: 20, color: Colors.indigo),
-                            SizedBox(width: 8),
-                            Text('Edit Catatan'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
                   title: Text(c.judul),
                   subtitle: Text('${c.kategori} • ${c.email}'),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
                     onPressed: () => _hapusCatatan(originalIndex),
                   ),
-                  onTap: () {
-                    Navigator.pushNamed(context, '/detail', arguments: c);
+                  onTap: () async {
+                    // Tap langsung untuk pindah ke halaman Detail
+                    // Menunggu kiriman data terbaru jika ada perubahan di dalam halaman detail
+                    final updatedCatatan = await Navigator.pushNamed(
+                      context,
+                      '/detail',
+                      arguments: c,
+                    );
+
+                    if (updatedCatatan is Catatan) {
+                      setState(() {
+                        final idx = _catatan.indexWhere(
+                          (element) => element.id == updatedCatatan.id,
+                        );
+                        if (idx != -1) _catatan[idx] = updatedCatatan;
+                      });
+                    }
                   },
                 );
               },
@@ -338,43 +322,90 @@ class _TambahCatatanPageState extends State<TambahCatatanPage> {
 }
 
 // === HALAMAN DETAIL ===
-class DetailCatatanPage extends StatelessWidget {
+class DetailCatatanPage extends StatefulWidget {
   final Catatan catatan;
   const DetailCatatanPage({super.key, required this.catatan});
 
   @override
+  State<DetailCatatanPage> createState() => _DetailCatatanPageState();
+}
+
+class _DetailCatatanPageState extends State<DetailCatatanPage> {
+  late Catatan _currentCatatan;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentCatatan = widget.catatan;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Detail Catatan')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              catatan.judul,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Chip(label: Text(catatan.kategori)),
-                const SizedBox(width: 8),
-                Text(
-                  catatan.email,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 32),
-            Text(
-              catatan.isi,
-              style: const TextStyle(fontSize: 16, height: 1.5),
+    // PopScope digunakan untuk menangkap tombol 'Back' sistem HP
+    // agar data terbaru yang telah diedit ikut terkirim kembali ke HomePage
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        Navigator.pop(context, _currentCatatan);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Detail Catatan'),
+          actions: [
+            // Tombol Edit berada di pojok kanan atas halaman Detail
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.indigo),
+              onPressed: () async {
+                final updated = await Navigator.pushNamed(
+                  context,
+                  '/tambah',
+                  arguments: _currentCatatan,
+                );
+
+                // Jika data berhasil diedit, perbarui tampilan Detail
+                if (updated is Catatan) {
+                  setState(() {
+                    _currentCatatan = updated;
+                  });
+                }
+              },
             ),
           ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _currentCatatan.judul,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Chip(label: Text(_currentCatatan.kategori)),
+                  const SizedBox(width: 8),
+                  Text(
+                    _currentCatatan.email,
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 32),
+              Text(
+                _currentCatatan.isi,
+                style: const TextStyle(fontSize: 16, height: 1.5),
+              ),
+            ],
+          ),
         ),
       ),
     );
