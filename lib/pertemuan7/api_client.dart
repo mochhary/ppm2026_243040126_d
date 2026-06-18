@@ -18,64 +18,66 @@ class ApiClient {
 
   // === Base URL & API key (lihat kontrak API di Langkah 0) ===
   static const String _baseUrl = 'https://besab-production.up.railway.app/api';
-  static const String _apiKey  = '8f38b5fbf0bc437285f2c62ed6e447eab56f78c8f95239a7';
+  static const String _apiKey =
+      '8f38b5fbf0bc437285f2c62ed6e447eab56f78c8f95239a7';
   // ==========================================================
 
   static const _timeout = Duration(seconds: 10);
 
   Map<String, String> get _headers => {
-        'X-API-Key': _apiKey,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+    'X-API-Key': _apiKey,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
 
   // ===== CRUD =====
 
   Future<List<Catatan>> getAll() async {
-    final res = await _send(() => http.get(
-          Uri.parse('$_baseUrl/catatan'),
-          headers: _headers,
-        ));
+    final res = await _send(
+      () => http.get(Uri.parse('$_baseUrl/catatan'), headers: _headers),
+    );
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final list = (body['data'] as List).cast<Map<String, dynamic>>();
     return list.map(Catatan.fromJson).toList();
   }
 
   Future<Catatan> getById(int id) async {
-    final res = await _send(() => http.get(
-          Uri.parse('$_baseUrl/catatan/$id'),
-          headers: _headers,
-        ));
+    final res = await _send(
+      () => http.get(Uri.parse('$_baseUrl/catatan/$id'), headers: _headers),
+    );
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     return Catatan.fromJson(body['data'] as Map<String, dynamic>);
   }
 
   Future<Catatan> insert(Catatan c) async {
-    final res = await _send(() => http.post(
-          Uri.parse('$_baseUrl/catatan'),
-          headers: _headers,
-          body: jsonEncode(c.toJson()),
-        ));
+    final res = await _send(
+      () => http.post(
+        Uri.parse('$_baseUrl/catatan'),
+        headers: _headers,
+        body: jsonEncode(c.toJson()),
+      ),
+    );
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     return Catatan.fromJson(body['data'] as Map<String, dynamic>);
   }
 
   Future<Catatan> update(Catatan c) async {
     assert(c.id != null);
-    final res = await _send(() => http.put(
-          Uri.parse('$_baseUrl/catatan/${c.id}'),
-          headers: _headers,
-          body: jsonEncode(c.toJson()),
-        ));
+    final res = await _send(
+      () => http.put(
+        Uri.parse('$_baseUrl/catatan/${c.id}'),
+        headers: _headers,
+        body: jsonEncode(c.toJson()),
+      ),
+    );
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     return Catatan.fromJson(body['data'] as Map<String, dynamic>);
   }
 
   Future<void> delete(int id) async {
-    await _send(() => http.delete(
-          Uri.parse('$_baseUrl/catatan/$id'),
-          headers: _headers,
-        ));
+    await _send(
+      () => http.delete(Uri.parse('$_baseUrl/catatan/$id'), headers: _headers),
+    );
   }
 
   // ===== Helper: kirim + tangani 3 kelas error =====
@@ -92,6 +94,12 @@ class ApiClient {
   }
 
   String _extractMessage(http.Response res) {
+    // 1. Cek secara spesifik jika status code adalah 401
+    if (res.statusCode == 401) {
+      return 'API key tidak valid';
+    }
+
+    // 2. Fallback ke pembacaan pesan dari response body untuk error lainnya
     try {
       final m = jsonDecode(res.body) as Map<String, dynamic>;
       return (m['message'] as String?) ?? 'HTTP ${res.statusCode}';

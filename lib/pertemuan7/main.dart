@@ -378,8 +378,10 @@ class _CatatanFormPageState extends State<CatatanFormPage> {
                 prefixIcon: Icon(Icons.notes),
                 border: OutlineInputBorder(),
               ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Isi wajib diisi' : null,
+              validator: (v) {
+                (v == null || v.trim().isEmpty) ? 'Isi wajib diisi' : null;
+                // return null;
+              },
             ),
             const SizedBox(height: 24),
             SizedBox(
